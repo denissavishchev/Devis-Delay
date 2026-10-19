@@ -555,13 +555,23 @@ void TubeView::paint (juce::Graphics& g)
     const auto b = getLocalBounds().toFloat();
     const float heat = glow;
 
-    // dark window
+    // light recessed window with an inner shadow along the top and left edges
     juce::Path win;
     win.addRoundedRectangle (b, 10.0f);
-    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff141514), 0, 0, juce::Colour (0xff050605), 0, b.getBottom(), false));
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xffb4afa3), 0, 0, juce::Colour (0xffc4bfb3), 0, b.getBottom(), false));
+    g.fillPath (win);
+    // depth: a lit pocket of space behind the lamp, falling off to dark corners
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xffd6d1c4).withAlpha (0.85f), b.getCentreX(), b.getCentreY() - 10.0f,
+                                             juce::Colour (0xff4a463d).withAlpha (0.75f), b.getX(), b.getY(), true));
     g.fillPath (win);
     g.saveState();
     g.reduceClipRegion (win);
+    g.setGradientFill (juce::ColourGradient (juce::Colours::black.withAlpha (0.5f), 0, b.getY(), juce::Colours::transparentBlack, 0, b.getY() + 28.0f, false));
+    g.fillRect (b);
+    g.setGradientFill (juce::ColourGradient (juce::Colours::black.withAlpha (0.32f), b.getX(), 0, juce::Colours::transparentBlack, b.getX() + 22.0f, 0, false));
+    g.fillRect (b);
+    g.setGradientFill (juce::ColourGradient (juce::Colours::black.withAlpha (0.25f), b.getRight(), 0, juce::Colours::transparentBlack, b.getRight() - 20.0f, 0, false));
+    g.fillRect (b);
 
     const float cx = b.getCentreX();
     auto heater = [] (float t)
@@ -576,6 +586,11 @@ void TubeView::paint (juce::Graphics& g)
                                              juce::Colours::transparentBlack, cx, b.getCentreY() - 4.0f - 95.0f, true));
     g.fillRect (b);
 
+    // soft shadow of the lamp on the back wall
+    g.setGradientFill (juce::ColourGradient (juce::Colours::black.withAlpha (0.35f), cx + 8.0f, b.getCentreY() + 6.0f,
+                                             juce::Colours::transparentBlack, cx + 8.0f, b.getCentreY() - 80.0f, true));
+    g.fillRect (b);
+
     // ---- glass envelope ----
     const float gw = 33.0f, top = 12.0f, baseTop = b.getBottom() - 32.0f;
     juce::Path glass;
@@ -588,10 +603,10 @@ void TubeView::paint (juce::Graphics& g)
     g.saveState();
     g.reduceClipRegion (glass);
     {
-        juce::ColourGradient cg (juce::Colour (0xff23282b), cx - gw, 0, juce::Colour (0xff23282b), cx + gw, 0, false);
-        cg.addColour (0.10, juce::Colour (0xff0d1011));
-        cg.addColour (0.5, juce::Colour (0xff050606));
-        cg.addColour (0.90, juce::Colour (0xff0d1011));
+        juce::ColourGradient cg (juce::Colour (0xffb9b5aa), cx - gw, 0, juce::Colour (0xffb9b5aa), cx + gw, 0, false);
+        cg.addColour (0.10, juce::Colour (0xffd2cfc5));
+        cg.addColour (0.5, juce::Colour (0xffeeebe3));
+        cg.addColour (0.90, juce::Colour (0xffd2cfc5));
         g.setGradientFill (cg);
         g.fillPath (glass);
     }
@@ -726,7 +741,7 @@ void TubeView::paint (juce::Graphics& g)
     }
     g.restoreState();
 
-    g.setColour (juce::Colours::white.withAlpha (0.18f));
+    g.setColour (juce::Colours::white.withAlpha (0.6f));
     g.drawRoundedRectangle (b.reduced (0.5f), 10.0f, 1.0f);
 }
 
@@ -847,34 +862,14 @@ void DelayEditor::paint (juce::Graphics& g)
     printed (g, "MODE", { modeArea.getX(), modeArea.getY() + 11, modeArea.getWidth(), 14 });
     printed (g, "SATURATE ON", { tubeArea.getX(), tubeArea.getBottom() - 70, tubeArea.getWidth(), 12 }, 9.5f);
 
-    // brand: big faint title from the left edge of the window, then the small logotype and racing stripes on top
+    // brand: racing stripes at the back, big faint title over them, then the small logotype on top
     {
         const auto r = brandArea.toFloat();
-        {
-            const auto bigF = juce::Font (juce::FontOptions (120.0f, juce::Font::bold));
-            juce::GlyphArrangement big;
-            big.addLineOfText (bigF, "DEVIS DELAY", 0.0f, 0.0f);
-            juce::Path bp;
-            big.createPath (bp);
-            const auto pb = bp.getBounds();
-            const juce::Rectangle<float> dst (8.0f, r.getY() + 1.0f, b.getWidth() - 16.0f, r.getHeight() - 2.0f);
-            bp.applyTransform (juce::AffineTransform::translation (-pb.getX(), -pb.getY())
-                                   .scaled (dst.getWidth() / pb.getWidth(), dst.getHeight() / pb.getHeight())
-                                   .translated (dst.getX(), dst.getY()));
-            g.setColour (juce::Colour (0xff6f6552).withAlpha (0.16f));
-            g.fillPath (bp, juce::AffineTransform::translation (1.2f, 1.2f));
-            g.setColour (juce::Colours::white.withAlpha (0.5f));
-            g.fillPath (bp);
-        }
         const auto f = juce::Font (juce::FontOptions (30.0f, juce::Font::bold | juce::Font::italic));
         juce::GlyphArrangement ga;
-        ga.addLineOfText (f, "Devis Delay", r.getX() + 4.0f, r.getCentreY() + 10.0f);
+        ga.addLineOfText (f, "Delay", r.getX() + 4.0f, r.getCentreY() + 10.0f);
         juce::Path txt;
         ga.createPath (txt);
-        g.setColour (juce::Colours::white.withAlpha (0.6f));
-        g.fillPath (txt, juce::AffineTransform::translation (1.2f, 1.6f));
-        g.setColour (ink);
-        g.fillPath (txt);
         const float tx = txt.getBounds().getRight() + 16.0f;
 
         const juce::Colour stripe[] = { orange, juce::Colour (0xffe3b72a), juce::Colour (0xff3a3a37) };
@@ -884,6 +879,30 @@ void DelayEditor::paint (juce::Graphics& g)
             g.setColour (stripe[k]);
             g.fillRoundedRectangle (tx + (float) k * 10.0f, yy, r.getRight() - tx - (float) k * 10.0f - 4.0f, 4.5f, 2.2f);
         }
+
+        {
+            const auto bigF = juce::Font (juce::FontOptions (120.0f, juce::Font::bold));
+            juce::GlyphArrangement big;
+            big.addLineOfText (bigF, "DEVIS LABORATORY", 0.0f, 0.0f);
+            juce::Path bp;
+            big.createPath (bp);
+            const auto pb = bp.getBounds();
+            const juce::Rectangle<float> dst (8.0f, r.getY() + 1.0f, b.getWidth() - 16.0f, r.getHeight() - 2.0f);
+            bp.applyTransform (juce::AffineTransform::translation (-pb.getX(), -pb.getY())
+                                   .scaled (dst.getWidth() / pb.getWidth(), dst.getHeight() / pb.getHeight())
+                                   .translated (dst.getX(), dst.getY()));
+            g.setColour (juce::Colour (0xff6f6552).withAlpha (0.28f));
+            g.fillPath (bp, juce::AffineTransform::translation (1.5f, 1.5f));
+            g.setColour (juce::Colours::white.withAlpha (0.68f));
+            g.fillPath (bp);
+            g.setColour (juce::Colour (0xff6f6552).withAlpha (0.3f));
+            g.strokePath (bp, juce::PathStrokeType (0.7f));
+        }
+
+        g.setColour (juce::Colours::white.withAlpha (0.6f));
+        g.fillPath (txt, juce::AffineTransform::translation (1.2f, 1.6f));
+        g.setColour (ink);
+        g.fillPath (txt);
     }
 
     g.setColour (juce::Colours::white.withAlpha (0.6f));
